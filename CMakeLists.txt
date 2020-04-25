@@ -1,194 +1,214 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.15)
+
+#Martianhunter_Edits
+
+include(cmake/StandardProjectSettings.cmake)
 
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Type of build" FORCE)
-    message(STATUS "No build type specified, using default: ${CMAKE_BUILD_TYPE}")
+  set(CMAKE_BUILD_TYPE
+      "Debug"
+      CACHE STRING "Type of build" FORCE)
+  message(STATUS "No build type specified, using default: ${CMAKE_BUILD_TYPE}")
 else()
-    message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+  message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 endif()
 
 find_package(Git REQUIRED)
 
 execute_process(
-    COMMAND "${GIT_EXECUTABLE}" "describe" "--dirty=-d"
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    OUTPUT_VARIABLE RWE_GIT_DESCRIPTION
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+  COMMAND "${GIT_EXECUTABLE}" "describe" "--dirty=-d"
+  WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+  OUTPUT_VARIABLE RWE_GIT_DESCRIPTION
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 if(NOT RWE_GIT_DESCRIPTION)
-    message(FATAL_ERROR "Failed to get the Git description")
+  message(FATAL_ERROR "Failed to get the Git description")
 endif()
 
 if(NOT RWE_GIT_DESCRIPTION MATCHES "^v([0-9]+\\.[0-9]+\\.[0-9]+)")
-    message(FATAL_ERROR "Failed to parse version from Git")
+  message(FATAL_ERROR "Failed to parse version from Git")
 endif()
 
 project("Robot War Engine" VERSION ${CMAKE_MATCH_1})
 enable_testing()
 
-set(RC_ENABLE_CATCH ON CACHE BOOL "Enables Catch support in RapidCheck" FORCE)
-set(RC_ENABLE_BOOST ON CACHE BOOL "Enables Boost support in RapidCheck" FORCE)
+set(RC_ENABLE_CATCH
+    ON
+    CACHE BOOL "Enables Catch support in RapidCheck" FORCE)
+set(RC_ENABLE_BOOST
+    ON
+    CACHE BOOL "Enables Boost support in RapidCheck" FORCE)
 add_subdirectory("libs/rapidcheck")
 
-set(JSON_BuildTests OFF CACHE INTERNAL "")
-set(JSON_Install OFF CACHE INTERNAL "")
+set(JSON_BuildTests
+    OFF
+    CACHE INTERNAL "")
+set(JSON_Install
+    OFF
+    CACHE INTERNAL "")
 add_subdirectory("libs/json")
 
 function(find_windows_dll var dll)
-    if(WIN32)
-        find_program(${var} ${dll})
+  if(WIN32)
+    find_program(${var} ${dll})
 
-        if(${${var}} STREQUAL "${var}-NOTFOUND")
-            message(FATAL_ERROR "${dll} not found")
-        endif()
-
-        message("Found ${dll}: ${${var}}")
-    else()
-        set(${var} "${var}-NOTFOUND" CACHE PATH "path to ${dll}")
+    if(${${var}} STREQUAL "${var}-NOTFOUND")
+      message(FATAL_ERROR "${dll} not found")
     endif()
+
+    message("Found ${dll}: ${${var}}")
+  else()
+    set(${var}
+        "${var}-NOTFOUND"
+        CACHE PATH "path to ${dll}")
+  endif()
 endfunction()
 
 function(target_copy_file target file)
-    if(WIN32)
-        add_custom_command(TARGET ${target} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy ${file} ${PROJECT_BINARY_DIR})
+  if(WIN32)
+    add_custom_command(
+      TARGET ${target}
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy ${file} ${PROJECT_BINARY_DIR})
 
-        get_filename_component("${file}_NAME" ${file} NAME)
-        install(FILES ${PROJECT_BINARY_DIR}/${${file}_NAME} DESTINATION ".")
-    endif()
+    get_filename_component("${file}_NAME" ${file} NAME)
+    install(FILES ${PROJECT_BINARY_DIR}/${${file}_NAME} DESTINATION ".")
+  endif()
 endfunction()
 
 function(target_copy_dll target dll)
-    if(WIN32)
-        find_windows_dll("${dll}_DLL" ${dll})
-        target_copy_file(${target} ${${dll}_DLL})
-    endif()
+  if(WIN32)
+    find_windows_dll("${dll}_DLL" ${dll})
+    target_copy_file(${target} ${${dll}_DLL})
+  endif()
 endfunction()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 if(NOT MSVC)
-    set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 17)
 endif()
 
 find_package(OpenGL REQUIRED)
 
 if(MSVC)
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set(Protobuf_LIBRARY "${CMAKE_SOURCE_DIR}/libs/_msvc/protobuf-3.5.1/lib/libprotobufd.lib")
-    else()
-        set(Protobuf_LIBRARY "${CMAKE_SOURCE_DIR}/libs/_msvc/protobuf-3.5.1/lib/libprotobuf.lib")
-    endif()
-    set(Protobuf_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/libs/_msvc/protobuf-3.5.1/include")
-    set(Protobuf_PROTOC_EXECUTABLE "${CMAKE_SOURCE_DIR}/libs/_msvc/protobuf-3.5.1/bin/protoc.exe")
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(Protobuf_LIBRARY "${CMAKE_SOURCE_DIR}/libs/_msvc/protobuf-3.5.1/lib/libprotobufd.lib")
+  else()
+    set(Protobuf_LIBRARY "${CMAKE_SOURCE_DIR}/libs/_msvc/protobuf-3.5.1/lib/libprotobuf.lib")
+  endif()
+  set(Protobuf_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/libs/_msvc/protobuf-3.5.1/include")
+  set(Protobuf_PROTOC_EXECUTABLE "${CMAKE_SOURCE_DIR}/libs/_msvc/protobuf-3.5.1/bin/protoc.exe")
 
-    set(GLEW_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/glew-2.1.0/bin/Release/x64/glew32.dll")
-    set(GLEW_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/_msvc/glew-2.1.0/lib/Release/x64/glew32.lib")
-    set(GLEW_INCLUDE_DIRS "libs/_msvc/glew-2.1.0/include")
+  set(GLEW_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/glew-2.1.0/bin/Release/x64/glew32.dll")
+  set(GLEW_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/_msvc/glew-2.1.0/lib/Release/x64/glew32.lib")
+  set(GLEW_INCLUDE_DIRS "libs/_msvc/glew-2.1.0/include")
 
-    set(Boost_INCLUDE_DIRS "libs/_msvc/boost_1_66_0")
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set(Boost_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/_msvc/boost_1_66_0/lib64-msvc-14.1/libboost_filesystem-vc141-mt-gd-x64-1_66.lib;${CMAKE_SOURCE_DIR}/libs/_msvc/boost_1_66_0/lib64-msvc-14.1/libboost_system-vc141-mt-gd-x64-1_66.lib;${CMAKE_SOURCE_DIR}/libs/_msvc/boost_1_66_0/lib64-msvc-14.1/libboost_program_options-vc141-mt-gd-x64-1_66.lib")
-    else()
-        set(Boost_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/_msvc/boost_1_66_0/lib64-msvc-14.1/libboost_filesystem-vc141-mt-x64-1_66.lib;${CMAKE_SOURCE_DIR}/libs/_msvc/boost_1_66_0/lib64-msvc-14.1/libboost_system-vc141-mt-x64-1_66.lib;${CMAKE_SOURCE_DIR}/libs/_msvc/boost_1_66_0/lib64-msvc-14.1/libboost_program_options-vc141-mt-x64-1_66.lib")
-    endif()
-    add_definitions(-DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE)
-    add_definitions(-DBOOST_DATE_TIME_NO_LIB)
-    add_definitions(-DBOOST_REGEX_NO_LIB)
+  set(Boost_INCLUDE_DIRS "libs/_msvc/boost_1_66_0")
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(Boost_LIBRARIES
+        "${CMAKE_SOURCE_DIR}/libs/_msvc/boost_1_66_0/lib64-msvc-14.1/libboost_filesystem-vc141-mt-gd-x64-1_66.lib;${CMAKE_SOURCE_DIR}/libs/_msvc/boost_1_66_0/lib64-msvc-14.1/libboost_system-vc141-mt-gd-x64-1_66.lib;${CMAKE_SOURCE_DIR}/libs/_msvc/boost_1_66_0/lib64-msvc-14.1/libboost_program_options-vc141-mt-gd-x64-1_66.lib"
+    )
+  else()
+    set(Boost_LIBRARIES
+        "${CMAKE_SOURCE_DIR}/libs/_msvc/boost_1_66_0/lib64-msvc-14.1/libboost_filesystem-vc141-mt-x64-1_66.lib;${CMAKE_SOURCE_DIR}/libs/_msvc/boost_1_66_0/lib64-msvc-14.1/libboost_system-vc141-mt-x64-1_66.lib;${CMAKE_SOURCE_DIR}/libs/_msvc/boost_1_66_0/lib64-msvc-14.1/libboost_program_options-vc141-mt-x64-1_66.lib"
+    )
+  endif()
+  add_definitions(-DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE)
+  add_definitions(-DBOOST_DATE_TIME_NO_LIB)
+  add_definitions(-DBOOST_REGEX_NO_LIB)
 
-    set(SDL2_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2-2.0.7/lib/x64/SDL2.dll")
-    set(SDL2_LIBRARY "${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2-2.0.7/lib/x64/SDL2.lib;${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2-2.0.7/lib/x64/SDL2main.lib")
-    set(SDL2_INCLUDE_DIR "libs/_msvc/SDL2-2.0.7/include")
+  set(SDL2_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2-2.0.7/lib/x64/SDL2.dll")
+  set(SDL2_LIBRARY
+      "${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2-2.0.7/lib/x64/SDL2.lib;${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2-2.0.7/lib/x64/SDL2main.lib"
+  )
+  set(SDL2_INCLUDE_DIR "libs/_msvc/SDL2-2.0.7/include")
 
-    set(SDL2_IMAGE_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2_image-2.0.2/lib/x64/SDL2_image.dll")
-    set(SDL2_IMAGE_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2_image-2.0.2/lib/x64/SDL2_image.lib")
-    set(SDL2_IMAGE_INCLUDE_DIRS "libs/_msvc/SDL2_image-2.0.2/include")
+  set(SDL2_IMAGE_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2_image-2.0.2/lib/x64/SDL2_image.dll")
+  set(SDL2_IMAGE_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2_image-2.0.2/lib/x64/SDL2_image.lib")
+  set(SDL2_IMAGE_INCLUDE_DIRS "libs/_msvc/SDL2_image-2.0.2/include")
 
-    set(SDL2_MIXER_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2_mixer-2.0.2/lib/x64/SDL2_mixer.dll")
-    set(SDL2_MIXER_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2_mixer-2.0.2/lib/x64/SDL2_mixer.lib")
-    set(SDL2_MIXER_INCLUDE_DIRS "libs/_msvc/SDL2_mixer-2.0.2/include")
+  set(SDL2_MIXER_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2_mixer-2.0.2/lib/x64/SDL2_mixer.dll")
+  set(SDL2_MIXER_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/_msvc/SDL2_mixer-2.0.2/lib/x64/SDL2_mixer.lib")
+  set(SDL2_MIXER_INCLUDE_DIRS "libs/_msvc/SDL2_mixer-2.0.2/include")
 
-    set(ZLIB_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/zlib-1.2.11/lib/zlib1.dll")
-    set(ZLIB_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/_msvc/zlib-1.2.11/lib/zdll.lib")
-    set(ZLIB_INCLUDE_DIRS "libs/_msvc/zlib-1.2.11/include")
+  set(ZLIB_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/zlib-1.2.11/lib/zlib1.dll")
+  set(ZLIB_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/_msvc/zlib-1.2.11/lib/zdll.lib")
+  set(ZLIB_INCLUDE_DIRS "libs/_msvc/zlib-1.2.11/include")
 
-    set(PNG_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/lpng1634/lib/libpng16-16.dll")
-    set(PNG_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/_msvc/lpng1634/lib/libpng16-16.lib")
-    set(PNG_INCLUDE_DIRS "libs/_msvc/lpng1634/include")
+  set(PNG_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/lpng1634/lib/libpng16-16.dll")
+  set(PNG_LIBRARIES "${CMAKE_SOURCE_DIR}/libs/_msvc/lpng1634/lib/libpng16-16.lib")
+  set(PNG_INCLUDE_DIRS "libs/_msvc/lpng1634/include")
 
-    set(FLAC_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libFLAC-8.dll")
-    set(JPEG_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libjpeg-9.dll")
-    set(MPG_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libmpg123-0.dll")
-    set(OGG_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libogg-0.dll")
-    set(TIFF_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libtiff-5.dll")
-    set(LZMA_DLL "LZMA_DLL-NOTFOUND") # bundled libtiff doesn't depend on liblzma
-    set(VORBIS_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libvorbis-0.dll")
-    set(VORBISFILE_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libvorbisfile-3.dll")
-    set(WEBP_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libwebp-7.dll")
+  set(FLAC_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libFLAC-8.dll")
+  set(JPEG_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libjpeg-9.dll")
+  set(MPG_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libmpg123-0.dll")
+  set(OGG_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libogg-0.dll")
+  set(TIFF_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libtiff-5.dll")
+  set(LZMA_DLL "LZMA_DLL-NOTFOUND") # bundled libtiff doesn't depend on liblzma
+  set(VORBIS_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libvorbis-0.dll")
+  set(VORBISFILE_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libvorbisfile-3.dll")
+  set(WEBP_DLL "${CMAKE_SOURCE_DIR}/libs/_msvc/extras/libwebp-7.dll")
 else()
-    set(Protobuf_LIBRARY "${CMAKE_SOURCE_DIR}/libs/_protobuf-install/lib/libprotobuf.a")
-    set(Protobuf_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/libs/_protobuf-install/include")
-    if(WIN32)
-        set(Protobuf_PROTOC_EXECUTABLE "${CMAKE_SOURCE_DIR}/libs/_protobuf-install/bin/protoc.exe")
-    else()
-        set(Protobuf_PROTOC_EXECUTABLE "${CMAKE_SOURCE_DIR}/libs/_protobuf-install/bin/protoc")
-    endif()
+  set(Protobuf_LIBRARY "${CMAKE_SOURCE_DIR}/libs/_protobuf-install/lib/libprotobuf.a")
+  set(Protobuf_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/libs/_protobuf-install/include")
+  if(WIN32)
+    set(Protobuf_PROTOC_EXECUTABLE "${CMAKE_SOURCE_DIR}/libs/_protobuf-install/bin/protoc.exe")
+  else()
+    set(Protobuf_PROTOC_EXECUTABLE "${CMAKE_SOURCE_DIR}/libs/_protobuf-install/bin/protoc")
+  endif()
 
-    find_package(GLEW REQUIRED)
-    find_windows_dll(GLEW_DLL "glew32.dll")
+  find_package(GLEW REQUIRED)
+  find_windows_dll(GLEW_DLL "glew32.dll")
 
-    set(Boost_USE_STATIC_LIBS ON)
-    set(Boost_NO_BOOST_CMAKE ON)
-    find_package(Boost 1.54.0 REQUIRED COMPONENTS filesystem program_options)
+  set(Boost_USE_STATIC_LIBS ON)
+  set(Boost_NO_BOOST_CMAKE ON)
+  find_package(Boost 1.54.0 REQUIRED COMPONENTS filesystem program_options)
 
-    find_package(SDL2 REQUIRED)
-    find_windows_dll(SDL2_DLL "SDL2.dll")
-    find_package(SDL2_image REQUIRED)
-    find_windows_dll(SDL2_IMAGE_DLL "SDL2_image.dll")
-    find_package(SDL2_mixer REQUIRED)
-    find_windows_dll(SDL2_MIXER_DLL "SDL2_mixer.dll")
+  find_package(SDL2 REQUIRED)
+  find_windows_dll(SDL2_DLL "SDL2.dll")
+  find_package(SDL2_image REQUIRED)
+  find_windows_dll(SDL2_IMAGE_DLL "SDL2_image.dll")
+  find_package(SDL2_mixer REQUIRED)
+  find_windows_dll(SDL2_MIXER_DLL "SDL2_mixer.dll")
 
-    find_package(ZLIB REQUIRED)
-    find_windows_dll(ZLIB_DLL "zlib1.dll")
-    find_package(PNG REQUIRED)
-    find_windows_dll(PNG_DLL "libpng16-16.dll")
+  find_package(ZLIB REQUIRED)
+  find_windows_dll(ZLIB_DLL "zlib1.dll")
+  find_package(PNG REQUIRED)
+  find_windows_dll(PNG_DLL "libpng16-16.dll")
 
-    find_windows_dll(FLAC_DLL "libFLAC-8.dll")
-    find_windows_dll(JPEG_DLL "libjpeg-8.dll")
-    find_windows_dll(MPG_DLL "libmpg123-0.dll")
-    find_windows_dll(OGG_DLL "libogg-0.dll")
-    find_windows_dll(TIFF_DLL "libtiff-5.dll")
-    find_windows_dll(LZMA_DLL "liblzma-5.dll")
-    find_windows_dll(VORBIS_DLL "libvorbis-0.dll")
-    find_windows_dll(VORBISFILE_DLL "libvorbisfile-3.dll")
-    find_windows_dll(WEBP_DLL "libwebp-7.dll")
-    find_windows_dll(ZSTD_DLL "libzstd.dll")
-    find_windows_dll(FLUIDSYNTH_DLL "libfluidsynth-2.dll")
-    find_windows_dll(MODPLUG_DLL "libmodplug-1.dll")
-    find_windows_dll(OPUSFILE_DLL "libopusfile-0.dll")
-    find_windows_dll(OPUS_DLL "libopus-0.dll")
-    find_windows_dll(PORTAUDIO_DLL "libportaudio-2.dll")
-    find_windows_dll(READLINE_DLL "libreadline8.dll")
-    find_windows_dll(SNDFILE_DLL "libsndfile-1.dll")
-    find_windows_dll(SPEEX_DLL "libspeex-1.dll")
-    find_windows_dll(VORBISENC_DLL "libvorbisenc-2.dll")
-    find_windows_dll(TERMCAP_DLL "libtermcap-0.dll")
-    find_windows_dll(GLIB2_DLL "libglib-2.0-0.dll")
-    find_windows_dll(GMODULE2_DLL "libgmodule-2.0-0.dll")
-    find_windows_dll(STDC++_DLL "libstdc++-6.dll")
-    find_windows_dll(GCC_S_SEH_DLL "libgcc_s_seh-1.dll")
-    find_windows_dll(WINPTHREAD_DLL "libwinpthread-1.dll")
-    find_windows_dll(INTL_DLL "libintl-8.dll")
-    find_windows_dll(PCRE_DLL "libpcre-1.dll")
-    find_windows_dll(ICONV_DLL "libiconv-2.dll")
+  find_windows_dll(FLAC_DLL "libFLAC-8.dll")
+  find_windows_dll(JPEG_DLL "libjpeg-8.dll")
+  find_windows_dll(MPG_DLL "libmpg123-0.dll")
+  find_windows_dll(OGG_DLL "libogg-0.dll")
+  find_windows_dll(TIFF_DLL "libtiff-5.dll")
+  find_windows_dll(LZMA_DLL "liblzma-5.dll")
+  find_windows_dll(VORBIS_DLL "libvorbis-0.dll")
+  find_windows_dll(VORBISFILE_DLL "libvorbisfile-3.dll")
+  find_windows_dll(WEBP_DLL "libwebp-7.dll")
+  find_windows_dll(ZSTD_DLL "libzstd.dll")
+  find_windows_dll(FLUIDSYNTH_DLL "libfluidsynth-2.dll")
+  find_windows_dll(MODPLUG_DLL "libmodplug-1.dll")
+  find_windows_dll(OPUSFILE_DLL "libopusfile-0.dll")
+  find_windows_dll(OPUS_DLL "libopus-0.dll")
+  find_windows_dll(PORTAUDIO_DLL "libportaudio-2.dll")
+  find_windows_dll(READLINE_DLL "libreadline8.dll")
+  find_windows_dll(SNDFILE_DLL "libsndfile-1.dll")
+  find_windows_dll(SPEEX_DLL "libspeex-1.dll")
+  find_windows_dll(VORBISENC_DLL "libvorbisenc-2.dll")
+  find_windows_dll(TERMCAP_DLL "libtermcap-0.dll")
+  find_windows_dll(GLIB2_DLL "libglib-2.0-0.dll")
+  find_windows_dll(GMODULE2_DLL "libgmodule-2.0-0.dll")
+  find_windows_dll(STDC++_DLL "libstdc++-6.dll")
+  find_windows_dll(GCC_S_SEH_DLL "libgcc_s_seh-1.dll")
+  find_windows_dll(WINPTHREAD_DLL "libwinpthread-1.dll")
+  find_windows_dll(INTL_DLL "libintl-8.dll")
+  find_windows_dll(PCRE_DLL "libpcre-1.dll")
+  find_windows_dll(ICONV_DLL "libiconv-2.dll")
 endif()
 
-# We should have std::chrono everywhere,
-# but boost sometimes fails to detect this (e.g. with clang 5 on Ubuntu)
-# and falls back to using boost::chrono.
-# This enables the use of std::chrono explicitly
-# in boost.asio.
+# We should have std::chrono everywhere, but boost sometimes fails to detect this (e.g. with clang 5 on Ubuntu) and
+# falls back to using boost::chrono. This enables the use of std::chrono explicitly in boost.asio.
 add_definitions(-DBOOST_ASIO_HAS_STD_CHRONO)
 
 set(Protobuf_USE_STATIC_LIBS ON)
@@ -198,14 +218,10 @@ protobuf_generate_cpp(PROTO_SOURCE_FILES PROTO_HEADER_FILES proto/network.proto)
 message("proto src files: ${PROTO_SOURCE_FILES}")
 message("proto header files: ${PROTO_HEADER_FILES}")
 
-file(GLOB IMGUI_SOURCE_FILES
-    ${PROJECT_SOURCE_DIR}/libs/imgui/*.cpp
-    )
+file(GLOB IMGUI_SOURCE_FILES ${PROJECT_SOURCE_DIR}/libs/imgui/*.cpp)
 
-set(IMGUI_IMPL_FILES
-    ${PROJECT_SOURCE_DIR}/libs/imgui/examples/imgui_impl_sdl.cpp
-    ${PROJECT_SOURCE_DIR}/libs/imgui/examples/imgui_impl_opengl3.cpp
-    )
+set(IMGUI_IMPL_FILES ${PROJECT_SOURCE_DIR}/libs/imgui/examples/imgui_impl_sdl.cpp
+                     ${PROJECT_SOURCE_DIR}/libs/imgui/examples/imgui_impl_opengl3.cpp)
 
 set(SOURCE_FILES
     ${IMGUI_IMPL_FILES}
@@ -530,22 +546,22 @@ set(SOURCE_FILES
     src/rwe/vfs/DirectoryFileSystem.cpp
     src/rwe/vfs/DirectoryFileSystem.h
     src/rwe/vfs/HpiFileSystem.cpp
-    src/rwe/vfs/HpiFileSystem.h
-    )
+    src/rwe/vfs/HpiFileSystem.h)
 
 if(WIN32)
-    add_definitions(-DRWE_PLATFORM_WINDOWS)
+  add_definitions(-DRWE_PLATFORM_WINDOWS)
 else()
-    add_definitions(-DRWE_PLATFORM_LINUX)
+  add_definitions(-DRWE_PLATFORM_LINUX)
 endif()
 
 add_library(librwe STATIC ${SOURCE_FILES} ${PROTO_SOURCE_FILES} ${PROTO_HEADER_FILES})
+
 set_target_properties(librwe PROPERTIES PREFIX "")
 if(MSVC)
-    target_compile_options(librwe PUBLIC "/std:c++latest")
-    add_definitions(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
+  target_compile_options(librwe PUBLIC "/std:c++latest")
+  add_definitions(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
 else()
-    target_compile_options(librwe PUBLIC "-Wall" "-Wextra")
+  target_compile_options(librwe PUBLIC "-Wall" "-Wextra")
 endif()
 target_include_directories(librwe PUBLIC "src")
 configure_file("src/rwe/config.h.in" "config/rwe/config.h" @ONLY)
@@ -554,8 +570,8 @@ target_include_directories(librwe PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/config")
 target_include_directories(librwe PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(librwe ${Boost_LIBRARIES})
 if(WIN32)
-    # winsock needed for boost asio on windows
-    target_link_libraries(librwe ws2_32)
+  # winsock needed for boost asio on windows
+  target_link_libraries(librwe ws2_32)
 endif()
 
 target_include_directories(librwe PUBLIC "libs/utfcpp/source")
@@ -565,10 +581,10 @@ target_link_libraries(librwe ${OPENGL_LIBRARIES})
 
 target_copy_file(librwe ${GLEW_DLL})
 if(MSVC)
-    target_link_libraries(librwe ${GLEW_LIBRARIES})
-    target_include_directories(librwe PUBLIC ${GLEW_INCLUDE_DIRS})
+  target_link_libraries(librwe ${GLEW_LIBRARIES})
+  target_include_directories(librwe PUBLIC ${GLEW_INCLUDE_DIRS})
 else()
-    target_link_libraries(librwe GLEW::GLEW)
+  target_link_libraries(librwe GLEW::GLEW)
 endif()
 
 target_copy_file(librwe ${SDL2_DLL})
@@ -595,26 +611,26 @@ target_copy_file(librwe ${MPG_DLL})
 target_copy_file(librwe ${OGG_DLL})
 target_copy_file(librwe ${TIFF_DLL})
 if(WIN32 AND NOT MSVC)
-    target_copy_file(librwe ${LZMA_DLL}) # MSYS2 libtiff depends on liblzma
-    target_copy_file(librwe ${ZSTD_DLL}) # MSYS2 libtiff depends on zstd
-    target_copy_file(librwe ${FLUIDSYNTH_DLL}) # MSYS2 SDL2_mixer depends on fluidsynth
-    target_copy_file(librwe ${MODPLUG_DLL}) # MSYS2 SDL2_mixer depends on modplug
-    target_copy_file(librwe ${OPUSFILE_DLL}) # MSYS2 SDL2_mixer depends on opusfile
-    target_copy_file(librwe ${OPUS_DLL})
-    target_copy_file(librwe ${PORTAUDIO_DLL})
-    target_copy_file(librwe ${READLINE_DLL})
-    target_copy_file(librwe ${SNDFILE_DLL})
-    target_copy_file(librwe ${SPEEX_DLL})
-    target_copy_file(librwe ${VORBISENC_DLL})
-    target_copy_file(librwe ${TERMCAP_DLL})
-    target_copy_file(librwe ${GLIB2_DLL})
-    target_copy_file(librwe ${GMODULE2_DLL})
-    target_copy_file(librwe ${STDC++_DLL})
-    target_copy_file(librwe ${GCC_S_SEH_DLL})
-    target_copy_file(librwe ${WINPTHREAD_DLL})
-    target_copy_file(librwe ${INTL_DLL})
-    target_copy_file(librwe ${PCRE_DLL})
-    target_copy_file(librwe ${ICONV_DLL})
+  target_copy_file(librwe ${LZMA_DLL}) # MSYS2 libtiff depends on liblzma
+  target_copy_file(librwe ${ZSTD_DLL}) # MSYS2 libtiff depends on zstd
+  target_copy_file(librwe ${FLUIDSYNTH_DLL}) # MSYS2 SDL2_mixer depends on fluidsynth
+  target_copy_file(librwe ${MODPLUG_DLL}) # MSYS2 SDL2_mixer depends on modplug
+  target_copy_file(librwe ${OPUSFILE_DLL}) # MSYS2 SDL2_mixer depends on opusfile
+  target_copy_file(librwe ${OPUS_DLL})
+  target_copy_file(librwe ${PORTAUDIO_DLL})
+  target_copy_file(librwe ${READLINE_DLL})
+  target_copy_file(librwe ${SNDFILE_DLL})
+  target_copy_file(librwe ${SPEEX_DLL})
+  target_copy_file(librwe ${VORBISENC_DLL})
+  target_copy_file(librwe ${TERMCAP_DLL})
+  target_copy_file(librwe ${GLIB2_DLL})
+  target_copy_file(librwe ${GMODULE2_DLL})
+  target_copy_file(librwe ${STDC++_DLL})
+  target_copy_file(librwe ${GCC_S_SEH_DLL})
+  target_copy_file(librwe ${WINPTHREAD_DLL})
+  target_copy_file(librwe ${INTL_DLL})
+  target_copy_file(librwe ${PCRE_DLL})
+  target_copy_file(librwe ${ICONV_DLL})
 endif()
 target_copy_file(librwe ${VORBIS_DLL})
 target_copy_file(librwe ${VORBISFILE_DLL})
@@ -630,8 +646,10 @@ target_include_directories(librwe PUBLIC ${PROJECT_SOURCE_DIR}/libs/imgui)
 target_include_directories(librwe PUBLIC ${PROJECT_SOURCE_DIR}/libs/imgui/examples)
 
 add_custom_target(rwe_shaders)
-add_custom_command(TARGET rwe_shaders PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shaders" "${PROJECT_BINARY_DIR}/shaders")
+add_custom_command(
+  TARGET rwe_shaders
+  PRE_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shaders" "${PROJECT_BINARY_DIR}/shaders")
 
 add_executable(rwe src/main.cpp)
 target_link_libraries(rwe librwe)
@@ -649,7 +667,7 @@ target_link_libraries(gaf_test ${PNG_LIBRARIES})
 target_include_directories(gaf_test PUBLIC ${PNG_INCLUDE_DIRS})
 target_include_directories(gaf_test PUBLIC libs/png++-0.2.9)
 if(WIN32)
-    target_compile_definitions(gaf_test PRIVATE __STDC_LIB_EXT1__=1)
+  target_compile_definitions(gaf_test PRIVATE __STDC_LIB_EXT1__=1)
 endif()
 
 add_executable(pcx_test src/pcx_test.cpp)
@@ -658,7 +676,7 @@ target_link_libraries(pcx_test ${PNG_LIBRARIES})
 target_include_directories(pcx_test PUBLIC ${PNG_INCLUDE_DIRS})
 target_include_directories(pcx_test PUBLIC libs/png++-0.2.9)
 if(WIN32)
-    target_compile_definitions(pcx_test PRIVATE __STDC_LIB_EXT1__=1)
+  target_compile_definitions(pcx_test PRIVATE __STDC_LIB_EXT1__=1)
 endif()
 
 add_executable(tnt_test src/tnt_test.cpp)
@@ -667,7 +685,7 @@ target_link_libraries(tnt_test ${PNG_LIBRARIES})
 target_include_directories(tnt_test PUBLIC ${PNG_INCLUDE_DIRS})
 target_include_directories(tnt_test PUBLIC libs/png++-0.2.9)
 if(WIN32)
-    target_compile_definitions(tnt_test PRIVATE __STDC_LIB_EXT1__=1)
+  target_compile_definitions(tnt_test PRIVATE __STDC_LIB_EXT1__=1)
 endif()
 
 add_executable(3do_test src/3do_test.cpp)
@@ -682,7 +700,7 @@ target_link_libraries(fnt_test ${PNG_LIBRARIES})
 target_include_directories(fnt_test PUBLIC ${PNG_INCLUDE_DIRS})
 target_include_directories(fnt_test PUBLIC libs/png++-0.2.9)
 if(WIN32)
-    target_compile_definitions(fnt_test PRIVATE __STDC_LIB_EXT1__=1)
+  target_compile_definitions(fnt_test PRIVATE __STDC_LIB_EXT1__=1)
 endif()
 
 add_executable(texture_test src/texture_test.cpp)
@@ -691,7 +709,7 @@ target_link_libraries(texture_test ${PNG_LIBRARIES})
 target_include_directories(texture_test PUBLIC ${PNG_INCLUDE_DIRS})
 target_include_directories(texture_test PUBLIC libs/png++-0.2.9)
 if(WIN32)
-    target_compile_definitions(texture_test PRIVATE __STDC_LIB_EXT1__=1)
+  target_compile_definitions(texture_test PRIVATE __STDC_LIB_EXT1__=1)
 endif()
 
 add_executable(rwe_bridge src/bridge.cpp)
@@ -701,7 +719,7 @@ target_link_libraries(rwe_bridge PRIVATE ${PNG_LIBRARIES})
 target_include_directories(rwe_bridge PUBLIC ${PNG_INCLUDE_DIRS})
 target_include_directories(rwe_bridge PUBLIC libs/png++-0.2.9)
 if(WIN32)
-    target_compile_definitions(rwe_bridge PRIVATE __STDC_LIB_EXT1__=1)
+  target_compile_definitions(rwe_bridge PRIVATE __STDC_LIB_EXT1__=1)
 endif()
 
 set(TEST_FILES
@@ -744,8 +762,7 @@ set(TEST_FILES
     test/rwe/rc_gen_optional.h
     test/rwe/rwe_string_test.cpp
     test/rwe/unit_util_test.cpp
-    test/rwe/util_test.cpp
-    )
+    test/rwe/util_test.cpp)
 
 add_executable(rwe_test test/main.cpp ${TEST_FILES})
 target_link_libraries(rwe_test Catch2::Catch2)
@@ -754,9 +771,7 @@ target_link_libraries(rwe_test rapidcheck_boost)
 target_link_libraries(rwe_test librwe)
 add_test(NAME rwe_test COMMAND rwe_test)
 
-install(TARGETS rwe rwe_bridge
-    RUNTIME DESTINATION .
-    )
+install(TARGETS rwe rwe_bridge RUNTIME DESTINATION .)
 install(FILES LICENSE README.md DESTINATION .)
 
 install(DIRECTORY shaders DESTINATION .)
@@ -772,9 +787,7 @@ set(CPACK_PACKAGE_FILE_NAME "RobotWarEngine-${RWE_GIT_DESCRIPTION}-${CMAKE_SYSTE
 set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
 set(CPACK_RESOURCE_FILE_README "${PROJECT_SOURCE_DIR}/README.md")
 
-set(CPACK_PACKAGE_EXECUTABLES
-    "launcher\\\\rwe-launcher;${PROJECT_NAME} Launcher ${RWE_GIT_DESCRIPTION}"
-    )
+set(CPACK_PACKAGE_EXECUTABLES "launcher\\\\rwe-launcher;${PROJECT_NAME} Launcher ${RWE_GIT_DESCRIPTION}")
 
 set(CPACK_PACKAGE_VENDOR "Michael Heasell")
 
