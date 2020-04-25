@@ -1,17 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-#Martianhunter_Edits
-
-include(cmake/StandardProjectSettings.cmake)
-
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE
-      "Debug"
-      CACHE STRING "Type of build" FORCE)
-  message(STATUS "No build type specified, using default: ${CMAKE_BUILD_TYPE}")
-else()
-  message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-endif()
+include(cmake/StandardSettings.cmake)
 
 find_package(Git REQUIRED)
 
